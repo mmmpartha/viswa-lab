@@ -1,11 +1,13 @@
-import { configureStore } from '@reduxjs/toolkit';
-import labReducer from './slice';
+import { configureStore } from "@reduxjs/toolkit";
+import labReducer from "./LabSlice";
 
-export const store = configureStore({
+const store = configureStore({
   reducer: {
-    labs: labReducer,
+    lab: labReducer,
   },
 });
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
+
+export default store;

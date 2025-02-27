@@ -7,9 +7,12 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
+import { useDispatch, useSelector } from "react-redux";
+import { RootState, AppDispatch } from "../redux/store";
+import { addLab } from "../redux/LabSlice";
+
 ModuleRegistry.registerModules([ClientSideRowModelModule, PaginationModule]);
 
-import data from "../lab.json";
 
 const labSchema = z.object({
   labName: z.string().min(3, "Lab Name must be at least 3 characters"),
@@ -28,6 +31,9 @@ const labSchema = z.object({
 });
 
 function LabGrid() {
+
+  const dispatch = useDispatch<AppDispatch>();
+  const labs = useSelector((state: RootState) => state.lab.labs); 
   const [rowData, setRowData] = useState([]);
   const [serviceInput, setServiceInput] = useState("");
   const [servicesList, setServicesList] = useState<string[]>([]);
@@ -44,9 +50,8 @@ function LabGrid() {
   });
 
   useEffect(() => {
-    if (Array.isArray(data)) setRowData(data);
-    else console.error("Invalid data format");
-  }, []);
+    setRowData(labs); // Update rowData when Redux store changes
+  }, [labs]);
 
   useEffect(() => {
     setValue("servicesOffered", servicesList);
@@ -99,7 +104,7 @@ function LabGrid() {
   
     console.log("new entry", newEntry);
   
-    setRowData([...rowData, newEntry]);
+    dispatch(addLab(newEntry));
     setServicesList([]);
     setTestMethodsList([]);
     reset();
