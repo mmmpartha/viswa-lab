@@ -1,7 +1,7 @@
 import "ag-grid-community/styles/ag-theme-quartz.css";
 import { AgGridReact } from "ag-grid-react";
 import { useEffect, useState, useRef } from "react";
-import { ColDef, ModuleRegistry } from "ag-grid-community";
+import {ColDef, ModuleRegistry } from "ag-grid-community";
 import { ClientSideRowModelModule, PaginationModule } from "ag-grid-community";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -10,6 +10,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "../redux/store";
 import { addLab, updateLab } from "../redux/LabSlice";
+import { LabInterface } from "../validators/lab.interface";
 
 ModuleRegistry.registerModules([ClientSideRowModelModule, PaginationModule]);
 
@@ -34,7 +35,7 @@ function LabGrid() {
 
   const dispatch = useDispatch<AppDispatch>();
   const labs = useSelector((state: RootState) => state.lab.labs);
-  const [rowData, setRowData] = useState([]);
+  const [rowData, setRowData] = useState<LabInterface[]>([]);
   const [serviceInput, setServiceInput] = useState("");
   const [servicesList, setServicesList] = useState<string[]>([]);
   const [testMethodsList, setTestMethodsList] = useState<
@@ -42,7 +43,7 @@ function LabGrid() {
   >([]);
   const [testMethodInput, setTestMethodInput] = useState({ method: "", parameters: "", sampleType: "" });
   const [editMode, setEditMode] = useState<number | null>(null);
-  const [editedRow, setEditedRow] = useState<any>({});
+  const [editedRow, setEditedRow] = useState<Partial<LabInterface>>({});
 
   const modalRef = useRef<HTMLDialogElement | null>(null);
 
@@ -70,7 +71,7 @@ function LabGrid() {
     }
   };
 
-  const columnDefs = [
+  const columnDefs: ColDef<LabInterface>[] = [
     {
       field: "id",
       headerName: "ID",
@@ -174,6 +175,7 @@ function LabGrid() {
         ),
     },
     {
+      //@ts-ignore
       field: "actions",
       headerName: "Actions",
       flex: 1,
@@ -241,12 +243,14 @@ function LabGrid() {
 
   // Save edited data
   const saveEdit = () => {
-    dispatch(updateLab(editedRow)); 
-    setEditMode(null); 
+    if (editedRow.id) {
+      dispatch(updateLab(editedRow as LabInterface));
+      setEditMode(null);
+    }
   };
 
 
-  const onSubmit = (formData) => {
+  const onSubmit = (formData: z.infer<typeof labSchema>) => {
     if (servicesList.length === 0 || testMethodsList.length === 0) {
       alert("Please add at least one service and one test method.");
       return;
@@ -256,13 +260,13 @@ function LabGrid() {
     formData.testMethods = testMethodsList;
 
     // Ensure ID is a valid number
-    const newEntry = {
-      id: rowData.length + 1, // Assign an incremented ID instead of parseInt
+    const newEntry: LabInterface = {
+      id: rowData.length + 1,
       ...formData,
+      servicesOffered: servicesList,
+      testMethods: testMethodsList,
       status: "Active"
     };
-
-    console.log("new entry", newEntry);
 
     dispatch(addLab(newEntry));
     setServicesList([]);

@@ -1,5 +1,5 @@
 import React from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 
 interface FormProps {
   defaultValues?: any;
@@ -7,7 +7,7 @@ interface FormProps {
 }
 
 const DynamicForm: React.FC<FormProps> = ({ defaultValues, onSubmit }) => {
-  const { control, handleSubmit, register, watch } = useForm({
+  const { handleSubmit, register, watch } = useForm({
     defaultValues,
   });
 
