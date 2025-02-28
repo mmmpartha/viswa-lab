@@ -9,7 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "../redux/store";
-import { addLab } from "../redux/LabSlice";
+import { addLab, updateLab } from "../redux/LabSlice";
 
 ModuleRegistry.registerModules([ClientSideRowModelModule, PaginationModule]);
 
@@ -33,7 +33,7 @@ const labSchema = z.object({
 function LabGrid() {
 
   const dispatch = useDispatch<AppDispatch>();
-  const labs = useSelector((state: RootState) => state.lab.labs); 
+  const labs = useSelector((state: RootState) => state.lab.labs);
   const [rowData, setRowData] = useState([]);
   const [serviceInput, setServiceInput] = useState("");
   const [servicesList, setServicesList] = useState<string[]>([]);
@@ -41,6 +41,8 @@ function LabGrid() {
     { method: string; parameters: string[]; sampleType: string }[]
   >([]);
   const [testMethodInput, setTestMethodInput] = useState({ method: "", parameters: "", sampleType: "" });
+  const [editMode, setEditMode] = useState<number | null>(null);
+  const [editedRow, setEditedRow] = useState<any>({});
 
   const modalRef = useRef<HTMLDialogElement | null>(null);
 
@@ -50,7 +52,7 @@ function LabGrid() {
   });
 
   useEffect(() => {
-    setRowData(labs); // Update rowData when Redux store changes
+    setRowData(labs); 
   }, [labs]);
 
   useEffect(() => {
@@ -67,6 +69,148 @@ function LabGrid() {
       setServiceInput("");
     }
   };
+
+  const columnDefs = [
+    {
+      field: "id",
+      headerName: "ID",
+      flex: 1,
+      cellRenderer: (params: any) => (
+        <button
+          onClick={() => onRowClicked(params)}
+          style={{
+            background: '#000',
+            color: '#fff',
+            padding: '5px 10px',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          {params.value}
+        </button>
+      ),
+    },
+    {
+      field: "labName",
+      headerName: "Lab Name",
+      flex: 2,
+      editable: (params: any) => params.data.id === editMode,
+      cellRenderer: (params: any) =>
+        editMode === params.data.id ? (
+          <input
+            type="text"
+            value={editedRow.labName || ""}
+            onChange={(e) => handleInputChange("labName", e.target.value)}
+          />
+        ) : (
+          params.value
+        ),
+    },
+    {
+      field: "contactPerson",
+      headerName: "Contact Person",
+      flex: 2,
+      editable: (params: any) => params.data.id === editMode,
+      cellRenderer: (params: any) =>
+        editMode === params.data.id ? (
+          <input
+            type="text"
+            value={editedRow.contactPerson || ""}
+            onChange={(e) => handleInputChange("contactPerson", e.target.value)}
+          />
+        ) : (
+          params.value
+        ),
+    },
+    {
+      field: "contactNumber",
+      headerName: "Contact Number",
+      flex: 2,
+      editable: (params: any) => params.data.id === editMode,
+      cellRenderer: (params: any) =>
+        editMode === params.data.id ? (
+          <input
+            type="text"
+            value={editedRow.contactNumber || ""}
+            onChange={(e) => handleInputChange("contactNumber", e.target.value)}
+          />
+        ) : (
+          params.value
+        ),
+    },
+    {
+      field: "location",
+      headerName: "Location",
+      flex: 2,
+      editable: (params: any) => params.data.id === editMode,
+      cellRenderer: (params: any) =>
+        editMode === params.data.id ? (
+          <input
+            type="text"
+            value={editedRow.location || ""}
+            onChange={(e) => handleInputChange("location", e.target.value)}
+          />
+        ) : (
+          params.value
+        ),
+    },
+    {
+      field: "status",
+      headerName: "Status",
+      flex: 1,
+      editable: (params: any) => params.data.id === editMode,
+      cellRenderer: (params: any) =>
+        editMode === params.data.id ? (
+          <select
+            value={editedRow.status || "Active"}
+            onChange={(e) => handleInputChange("status", e.target.value)}
+          >
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        ) : (
+          params.value
+        ),
+    },
+    {
+      field: "actions",
+      headerName: "Actions",
+      flex: 1,
+      cellRenderer: (params: any) =>
+        editMode === params.data.id ? (
+          <button
+            onClick={saveEdit}
+            style={{
+              background: '#000',
+              color: '#fff',
+              padding: '5px 10px',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >Save</button>
+        ) : null,
+    },
+    {
+      field: "servicesOffered",
+      headerName: "Services Offered",
+      flex: 2,
+      editable: false,
+      valueFormatter: (params: any) => params.value.join(", "),
+    },
+    {
+      field: "testMethods",
+      headerName: "Test Methods",
+      flex: 3,
+      editable: false,
+      cellRenderer: (params: any) => {
+        return params.value.map((tm: any) =>
+          `${tm.method} (${tm.parameters.join(", ")}) - ${tm.sampleType}`
+        ).join("; ");
+      }
+    },
+  ];
 
 
   const addTestMethod = () => {
@@ -86,47 +230,54 @@ function LabGrid() {
     }
   };
 
+  const onRowClicked = (params: any) => {
+    setEditMode(params.data.id);
+    setEditedRow(params.data);
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setEditedRow((prev: any) => ({ ...prev, [field]: value }));
+  };
+
+  // Save edited data
+  const saveEdit = () => {
+    dispatch(updateLab(editedRow)); 
+    setEditMode(null); 
+  };
+
+
   const onSubmit = (formData) => {
     if (servicesList.length === 0 || testMethodsList.length === 0) {
       alert("Please add at least one service and one test method.");
       return;
     }
-  
+
     formData.servicesOffered = servicesList;
     formData.testMethods = testMethodsList;
-  
+
     // Ensure ID is a valid number
     const newEntry = {
       id: rowData.length + 1, // Assign an incremented ID instead of parseInt
       ...formData,
       status: "Active"
     };
-  
+
     console.log("new entry", newEntry);
-  
+
     dispatch(addLab(newEntry));
     setServicesList([]);
     setTestMethodsList([]);
     reset();
     closeModal();
   };
-  
+
 
   return (
     <div style={{ width: "90vw", maxWidth: "1200px", margin: "auto", position: "relative" }}>
       <button onClick={openModal} style={{ marginBottom: "10px", padding: "10px", background: "#007bff", color: "#fff", borderRadius: "5px" }}>Add Form</button>
 
       <div className="ag-theme-quartz" style={{ height: "80vh", width: "100%" }}>
-        <AgGridReact rowData={rowData} columnDefs={[
-          { field: "id", headerName: "ID", flex: 1 },
-          { field: "labName", headerName: "Lab Name", flex: 2 },
-          { field: "contactPerson", headerName: "Contact Person", flex: 2 },
-          { field: "contactNumber", headerName: "Contact Number", flex: 2 },
-          { field: "location", headerName: "Location", flex: 2 },
-          { field: "servicesOffered", headerName: "Services", flex: 3, valueFormatter: params => params.value?.join(", ") || "" },
-          { field: "testMethods", headerName: "Test Methods", flex: 3, valueFormatter: params => params.value?.map(tm => `${tm.method} (${tm.sampleType})`).join(", ") || "" },
-          { field: "status", headerName: "Status", flex: 1 },
-        ]} pagination paginationPageSize={10} domLayout="autoHeight" />
+        <AgGridReact rowData={rowData} columnDefs={columnDefs} pagination paginationPageSize={10} />
       </div>
 
       {/* Modal Dialog */}
